@@ -7,21 +7,26 @@ import { format } from "date-fns";
 import Chart from "../components/Chart";
 import { useInterval } from "../components/useInterval";
 import inverter from "../assets/images/inverter.png";
+import solar from "../assets/images/sunny.png";
+import RadianceChart from "../components/RadianceChart";
 
 function Dashboard() {
   var timer1 = null;
   var timer2 = null;
   var timer3 = null;
   var timer4 = null;
+  var timer5 = null;
 
   let [voltage1, setVoltage1] = useState(0);
   let [voltage2, setVoltage2] = useState(0);
   let [voltage3, setVoltage3] = useState(0);
   let [voltage4, setVoltage4] = useState(0);
+  let [radiance, setRadiance] = useState(0);
   let [data1, setData1] = useState([{ x: new Date(), y: 0 }]);
   let [data2, setData2] = useState([{ x: new Date(), y: 0 }]);
   let [data3, setData3] = useState([{ x: new Date(), y: 0 }]);
   let [data4, setData4] = useState([{ x: new Date(), y: 0 }]);
+  let [data5, setData5] = useState([{ x: new Date(), y: [0, 0, 0, 0, 0] }]);
 
   const [panel1, updatePanel1] = useReducer(
     (prev, next) => {
@@ -77,6 +82,17 @@ function Dashboard() {
       power: 0,
       frequency: 0,
       temperature: 0,
+    }
+  );
+
+  const [R1, updateR1] = useReducer(
+    (prev, next) => {
+      return { ...prev, ...next };
+    },
+    {
+      fetchState: 0,
+      status: false,
+      radiance: 0,
     }
   );
 
@@ -188,6 +204,35 @@ function Dashboard() {
     });
   }, []);
 
+  useEffect(() => {
+    const query = ref(db, "/NODE-05");
+    return onValue(query, (snapshot) => {
+      const data = snapshot.val();
+
+      if (snapshot.exists()) {
+        //console.log(new Date(data["timestamp"] * 1000));
+        setRadiance(data["radiance"]);
+        updateR1({
+          status: true,
+          radiance: data["radiance"],
+        });
+      }
+
+      if (timer5) {
+        clearTimeout(timer5);
+        timer5 = null;
+      }
+
+      timer5 = setTimeout(() => {
+        setRadiance(0);
+        updateR1({
+          status: false,
+          radiance: 0,
+        });
+      }, 5000);
+    });
+  }, []);
+
   useInterval(() => {
     var temp = data1;
     if (temp.length >= 30) {
@@ -247,6 +292,27 @@ function Dashboard() {
       },
     ]);
   }, 1000);
+
+  useInterval(() => {
+    var temp = data5;
+    if (temp.length >= 30) {
+      temp.shift();
+    }
+    temp.push({ x: new Date(), y: R1["radiance"] });
+    setData5(temp);
+
+    ApexCharts.exec("radiance-chart", "updateSeries", [
+      {
+        name: "Radiation",
+        style: {
+          fontFamily: "Lato",
+          fontSize: "14px",
+          color: "#fff",
+        },
+        data: data5,
+      },
+    ]);
+  }, 2000);
 
   return (
     <div className="w-full h-full font-lato">
@@ -366,6 +432,64 @@ function Dashboard() {
                       color: "#fff",
                     },
                     data: data4,
+                  },
+                ]}
+              />
+            </div>
+          </div>
+          <div className="w-full flex flex-row gap-4">
+            <div className="w-[450px] bg-[#1F1E23] rounded-[15px] p-8 flex flex-col gap-4">
+              <div className="w-full h-[40%] flex flex-row justify-between gap-4">
+                <div className="w-full h-full flex flex-col gap-2">
+                  <h1 className="text-xl font-lato-bold w-[80px]">
+                    Pyranometer
+                  </h1>
+                  <div className="w-full h-full bg-[#272A31] rounded-[7.5px] px-4 py-2 flex items-center flex-row">
+                    <div className="w-full flex flex-col">
+                      <p className="font-lato-light text-sm text-white/70">
+                        Status
+                      </p>
+                      <p className="font-lato-bold text-base">
+                        {R1["status"] ? "Active" : "Inactive"}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="ease-in-out duration-500 w-full bg-[#272A31] rounded-[7.5px] flex items-center justify-center">
+                  <img
+                    className={`${
+                      R1["status"] ? "opacity-100" : "opacity-50"
+                    } w-16`}
+                    src={solar}
+                  />
+                </div>
+              </div>
+              <div className="w-full h-[60%] flex flex-col gap-4">
+                <div className="w-full h-full pt-4 px-4 bg-[#272A31] rounded-[7.5px] grid grid-cols-2">
+                  <div className="w-full flex flex-col gap-1">
+                    <p className="font-lato-light text-white/70">
+                      Solar Radiation
+                    </p>
+                    <p className="font-lato-bold text-xl">{radiance} W/m²</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div className="w-full p-4 bg-[#1F1E23] rounded-[15px] ">
+              <RadianceChart
+                id="radiance-chart"
+                title={"Solar Radiation"}
+                y_title={"Radiation"}
+                data={[
+                  {
+                    name: "Radiation",
+                    style: {
+                      fontFamily: "Lato",
+                      fontSize: "14px",
+                      color: "#fff",
+                    },
+                    data: data5,
                   },
                 ]}
               />

@@ -19,7 +19,7 @@ function PVPanel({ id, status, data }) {
                 Temperature
               </p>
               <p className="font-lato-bold text-lg">
-                {data["temperature"]} &deg;C
+                {data["temperature"].toFixed(1)} &deg;C
               </p>
             </div>
           </div>

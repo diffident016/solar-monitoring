@@ -1,7 +1,7 @@
 import React, { useEffect, useReducer, useState } from "react";
 import PVPanel from "../components/PVPanel";
 import ReactApexChart from "react-apexcharts";
-import { onValue, ref } from "firebase/database";
+import { onValue, ref, set, get } from "firebase/database";
 import { db } from "../../firebase";
 import { format } from "date-fns";
 import Chart from "../components/Chart";
@@ -9,6 +9,7 @@ import { useInterval } from "../components/useInterval";
 import inverter from "../assets/images/inverter.png";
 import solar from "../assets/images/sunny.png";
 import RadianceChart from "../components/RadianceChart";
+import drive from "../assets/images/google-drive.png";
 
 function Dashboard() {
   var timer1 = null;
@@ -27,6 +28,7 @@ function Dashboard() {
   let [data3, setData3] = useState([{ x: new Date(), y: 0 }]);
   let [data4, setData4] = useState([{ x: new Date(), y: 0 }]);
   let [data5, setData5] = useState([{ x: new Date(), y: [0, 0, 0, 0, 0] }]);
+  const [recording, setRecording] = useState(0);
 
   const [panel1, updatePanel1] = useReducer(
     (prev, next) => {
@@ -229,7 +231,18 @@ function Dashboard() {
           status: false,
           radiance: 0,
         });
-      }, 5000);
+      }, 10000);
+    });
+  }, []);
+
+  useEffect(() => {
+    const query = ref(db, "/RECORDING");
+    return onValue(query, (snapshot) => {
+      const data = snapshot.val();
+
+      if (snapshot.exists()) {
+        setRecording(data["recording"]);
+      }
     });
   }, []);
 
@@ -239,7 +252,7 @@ function Dashboard() {
       temp.shift();
     }
 
-    temp.push({ x: new Date(), y: voltage1 });
+    temp.push({ x: new Date(), y: voltage1.toFixed(2) });
     setData1(temp);
 
     temp = data2;
@@ -247,7 +260,7 @@ function Dashboard() {
       temp.shift();
     }
 
-    temp.push({ x: new Date(), y: voltage2 });
+    temp.push({ x: new Date(), y: voltage2.toFixed(2) });
     setData2(temp);
 
     ApexCharts.exec("pv-chart", "updateSeries", [
@@ -314,10 +327,59 @@ function Dashboard() {
     ]);
   }, 2000);
 
+  const toggleRecording = async () => {
+    if (recording) {
+      const startedAt = await get(ref(db, "RECORDING/startedAt"));
+
+      set(ref(db, "RECORDING"), {
+        recording: 2,
+        startedAt: format(startedAt.val() || new Date(), "yyyy-MM-dd HH:mm:ss"),
+        endedAt: format(new Date(), "yyyy-MM-dd HH:mm:ss"),
+      });
+      setRecording(2);
+    } else {
+      set(ref(db, "RECORDING"), {
+        recording: 1,
+        startedAt: format(new Date(), "yyyy-MM-dd HH:mm:ss"),
+        endedAt: null,
+      });
+      setRecording(1);
+    }
+  };
+
   return (
     <div className="w-full h-full font-lato">
       <div className="w-full flex flex-col p-8 gap-6">
-        <h1 className="font-lato-bold text-3xl">Solar PV Dashboard</h1>
+        <div className="w-full bg-[#1F1E23] rounded-[15px] flex flex-row justify-between p-8 gap-4">
+          <h1 className="font-lato-bold text-3xl">Solar PV Dashboard</h1>
+          <div className="flex flex-row gap-4">
+            <a
+              href="https://drive.google.com/drive/u/3/folders/17launolGC7baacIu_yyBsh5EVdWbeD_7"
+              target="_blank"
+              className="flex flex-row text-lg font-semibold items-center gap-3 bg-[#272A31] rounded-md py-3 px-4"
+            >
+              <img src={drive} className="w-5 h-5 invert" />
+              Recordings Drive
+            </a>
+            <button
+              onClick={() => {
+                toggleRecording();
+              }}
+              className="flex flex-row text-lg font-semibold items-center gap-3 bg-[#272A31] rounded-md py-3 px-4"
+            >
+              <div
+                className={`rounded-full w-3 h-3 ${
+                  recording ? "bg-[#f01c32] animate-ping" : "bg-[#89898b]"
+                } `}
+              ></div>
+              {recording === 1
+                ? "Stop Recording"
+                : recording === 2
+                ? "Saving..."
+                : "Start Recording"}
+            </button>
+          </div>
+        </div>
         <div className="w-full h-full flex flex-col gap-4">
           <div className="w-full h-full flex flex-row gap-4 items-center">
             <PVPanel id={1} status={panel1["status"]} data={panel1} />
@@ -386,7 +448,7 @@ function Dashboard() {
                       Voltage
                     </p>
                     <p className="font-lato-bold text-lg">
-                      {AC1["voltage"]} volts
+                      {AC1["voltage"].toFixed(1)} volts
                     </p>
                   </div>
                   <div className="w-full flex flex-col gap-1">

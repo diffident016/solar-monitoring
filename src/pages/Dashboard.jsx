@@ -384,7 +384,7 @@ function Dashboard() {
           <div className="w-full h-full flex flex-row gap-4 items-center">
             <PVPanel id={1} status={panel1["status"]} data={panel1} />
             <PVPanel id={2} status={panel2["status"]} data={panel2} />
-            <PVPanel id={3} status={panel3["status"]} data={panel3} />
+            {/* <PVPanel id={3} status={panel3["status"]} data={panel3} /> */}
           </div>
           <div className="p-4 bg-[#1F1E23] rounded-[15px] ">
             <Chart

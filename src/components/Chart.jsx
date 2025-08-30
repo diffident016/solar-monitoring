@@ -26,14 +26,14 @@ function Chart({ id, data, title, y_title }) {
           },
         },
         markers: {
-          size: 1,
+          size: 0,
         },
         dataLabels: {
           enabled: true,
         },
         stroke: {
           width: 1,
-          curve: "smooth",
+          // curve: "smooth",
         },
         xaxis: {
           type: "datetime",

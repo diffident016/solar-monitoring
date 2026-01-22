@@ -28,6 +28,14 @@ function Dashboard() {
   let [data3, setData3] = useState([{ x: new Date(), y: 0 }]);
   let [data4, setData4] = useState([{ x: new Date(), y: 0 }]);
   let [data5, setData5] = useState([{ x: new Date(), y: [0, 0, 0, 0, 0] }]);
+
+  // Additional data arrays for current, frequency, and power
+  let [current1, setCurrent1] = useState([{ x: new Date(), y: 0 }]);
+  let [current2, setCurrent2] = useState([{ x: new Date(), y: 0 }]);
+  let [power1, setPower1] = useState([{ x: new Date(), y: 0 }]);
+  let [power2, setPower2] = useState([{ x: new Date(), y: 0 }]);
+  let [frequency, setFrequency] = useState([{ x: new Date(), y: 0 }]);
+  let [powerAC, setPowerAC] = useState([{ x: new Date(), y: 0 }]);
   const [recording, setRecording] = useState(0);
 
   const [panel1, updatePanel1] = useReducer(
@@ -41,7 +49,7 @@ function Dashboard() {
       current: 0,
       power: 0,
       temperature: 0,
-    }
+    },
   );
 
   const [panel2, updatePanel2] = useReducer(
@@ -55,7 +63,7 @@ function Dashboard() {
       current: 0,
       power: 0,
       temperature: 0,
-    }
+    },
   );
 
   const [panel3, updatePanel3] = useReducer(
@@ -69,7 +77,7 @@ function Dashboard() {
       current: 0,
       power: 0,
       temperature: 0,
-    }
+    },
   );
 
   const [AC1, updateAC1] = useReducer(
@@ -84,7 +92,7 @@ function Dashboard() {
       power: 0,
       frequency: 0,
       temperature: 0,
-    }
+    },
   );
 
   const [R1, updateR1] = useReducer(
@@ -95,7 +103,7 @@ function Dashboard() {
       fetchState: 0,
       status: false,
       radiance: 0,
-    }
+    },
   );
 
   useEffect(() => {
@@ -251,7 +259,6 @@ function Dashboard() {
     if (temp.length >= 30) {
       temp.shift();
     }
-
     temp.push({ x: new Date(), y: voltage1.toFixed(2) });
     setData1(temp);
 
@@ -259,28 +266,98 @@ function Dashboard() {
     if (temp.length >= 30) {
       temp.shift();
     }
-
     temp.push({ x: new Date(), y: voltage2.toFixed(2) });
     setData2(temp);
 
-    ApexCharts.exec("pv-chart", "updateSeries", [
+    // Update current data for PV Panel 1
+    var tempCurrent1 = current1;
+    if (tempCurrent1.length >= 30) {
+      tempCurrent1.shift();
+    }
+    tempCurrent1.push({ x: new Date(), y: panel1["current"] });
+    setCurrent1(tempCurrent1);
+
+    // Update current data for PV Panel 2
+    var tempCurrent2 = current2;
+    if (tempCurrent2.length >= 30) {
+      tempCurrent2.shift();
+    }
+    tempCurrent2.push({ x: new Date(), y: panel2["current"] });
+    setCurrent2(tempCurrent2);
+
+    // Update power data for PV Panel 1
+    var tempPower1 = power1;
+    if (tempPower1.length >= 30) {
+      tempPower1.shift();
+    }
+    tempPower1.push({ x: new Date(), y: panel1["power"] });
+    setPower1(tempPower1);
+
+    // Update power data for PV Panel 2
+    var tempPower2 = power2;
+    if (tempPower2.length >= 30) {
+      tempPower2.shift();
+    }
+    tempPower2.push({ x: new Date(), y: panel2["power"] });
+    setPower2(tempPower2);
+
+    ApexCharts.exec("pv-chart-1", "updateSeries", [
       {
-        name: "PV Panel 1",
+        name: "PV Panel 1 Voltage",
         style: {
           fontFamily: "Lato",
           fontSize: "14px",
-          color: "#fff",
+          color: "#343a40",
         },
         data: data1,
       },
       {
-        name: "PV Panel 2",
+        name: "PV Panel 1 Current",
         style: {
           fontFamily: "Lato",
           fontSize: "14px",
-          color: "#fff",
+          color: "#343a40",
+        },
+        data: current1,
+      },
+      {
+        name: "PV Panel 1 Power",
+        style: {
+          fontFamily: "Lato",
+          fontSize: "14px",
+          color: "#343a40",
+        },
+        data: power1,
+      },
+    ]);
+
+    ApexCharts.exec("pv-chart-2", "updateSeries", [
+      {
+        name: "PV Panel 2 Voltage",
+        style: {
+          fontFamily: "Lato",
+          fontSize: "14px",
+          color: "#343a40",
         },
         data: data2,
+      },
+      {
+        name: "PV Panel 2 Current",
+        style: {
+          fontFamily: "Lato",
+          fontSize: "14px",
+          color: "#343a40",
+        },
+        data: current2,
+      },
+      {
+        name: "PV Panel 2 Power",
+        style: {
+          fontFamily: "Lato",
+          fontSize: "14px",
+          color: "#343a40",
+        },
+        data: power2,
       },
     ]);
   }, 1000);
@@ -293,15 +370,49 @@ function Dashboard() {
     temp.push({ x: new Date(), y: voltage4 });
     setData4(temp);
 
+    // Update frequency data for Inverter
+    var tempFrequency = frequency;
+    if (tempFrequency.length >= 30) {
+      tempFrequency.shift();
+    }
+    tempFrequency.push({ x: new Date(), y: AC1["frequency"] });
+    setFrequency(tempFrequency);
+
+    // Update power data for Inverter
+    var tempPowerAC = powerAC;
+    if (tempPowerAC.length >= 30) {
+      tempPowerAC.shift();
+    }
+    tempPowerAC.push({ x: new Date(), y: AC1["power"] });
+    setPowerAC(tempPowerAC);
+
     ApexCharts.exec("ac-chart", "updateSeries", [
       {
-        name: "Inverter 1",
+        name: "Inverter Voltage",
         style: {
           fontFamily: "Lato",
           fontSize: "14px",
-          color: "#fff",
+          color: "#343a40",
         },
         data: data4,
+      },
+      {
+        name: "Inverter Frequency",
+        style: {
+          fontFamily: "Lato",
+          fontSize: "14px",
+          color: "#343a40",
+        },
+        data: frequency,
+      },
+      {
+        name: "Inverter Power",
+        style: {
+          fontFamily: "Lato",
+          fontSize: "14px",
+          color: "#343a40",
+        },
+        data: powerAC,
       },
     ]);
   }, 1000);
@@ -320,7 +431,7 @@ function Dashboard() {
         style: {
           fontFamily: "Lato",
           fontSize: "14px",
-          color: "#fff",
+          color: "#343a40",
         },
         data: data5,
       },
@@ -350,89 +461,265 @@ function Dashboard() {
   return (
     <div className="w-full h-full font-lato">
       <div className="w-full flex flex-col p-8 gap-6">
-        <div className="w-full bg-[#1F1E23] rounded-[15px] flex flex-row justify-between p-8 gap-4">
-          <h1 className="font-lato-bold text-3xl">Solar PV Dashboard</h1>
+        <div className="w-full bg-[#f8f9fa] rounded-[15px] flex flex-row justify-between p-8 gap-4">
+          <h1 className="font-lato-bold text-3xl text-gray-800">
+            Solar PV Dashboard
+          </h1>
           <div className="flex flex-row gap-4">
             <a
               href="https://drive.google.com/drive/u/3/folders/17launolGC7baacIu_yyBsh5EVdWbeD_7"
               target="_blank"
-              className="flex flex-row text-lg font-semibold items-center gap-3 bg-[#272A31] rounded-md py-3 px-4"
+              className="flex flex-row text-lg font-semibold items-center gap-3 bg-[#e9ecef] rounded-md py-3 px-4 text-gray-800"
             >
-              <img src={drive} className="w-5 h-5 invert" />
+              <img src={drive} className="w-5 h-5" />
               Recordings Drive
             </a>
             <button
               onClick={() => {
                 toggleRecording();
               }}
-              className="flex flex-row text-lg font-semibold items-center gap-3 bg-[#272A31] rounded-md py-3 px-4"
+              className="flex flex-row text-lg font-semibold items-center gap-3 bg-[#e9ecef] rounded-md py-3 px-4 text-gray-800"
             >
               <div
                 className={`rounded-full w-3 h-3 ${
-                  recording ? "bg-[#f01c32] animate-ping" : "bg-[#89898b]"
+                  recording ? "bg-[#dc3545] animate-ping" : "bg-[#6c757d]"
                 } `}
               ></div>
               {recording === 1
                 ? "Stop Recording"
                 : recording === 2
-                ? "Saving..."
-                : "Start Recording"}
+                  ? "Saving..."
+                  : "Start Recording"}
             </button>
           </div>
         </div>
         <div className="w-full h-full flex flex-col gap-4">
-          <div className="w-full h-full flex flex-row gap-4 items-center">
-            <PVPanel id={1} status={panel1["status"]} data={panel1} />
-            <PVPanel id={2} status={panel2["status"]} data={panel2} />
-            {/* <PVPanel id={3} status={panel3["status"]} data={panel3} /> */}
-          </div>
-          <div className="p-4 bg-[#1F1E23] rounded-[15px] ">
-            <Chart
-              id="pv-chart"
-              title={"PV Voltage"}
-              y_title={"Voltage DC"}
-              data={[
-                {
-                  name: "PV Panel 1",
-                  style: {
-                    fontFamily: "Lato",
-                    fontSize: "14px",
-                    color: "#fff",
-                  },
-                  data: data1,
-                },
-                {
-                  name: "PV Panel 2",
-                  style: {
-                    fontFamily: "Lato",
-                    fontSize: "14px",
-                    color: "#fff",
-                  },
-                  data: data2,
-                },
-              ]}
-            />
-          </div>
           <div className="w-full flex flex-row gap-4">
-            <div className="w-[450px] bg-[#1F1E23] rounded-[15px] p-8 flex flex-col gap-4">
+            <div className="w-[450px] bg-[#f8f9fa] rounded-[15px] p-8 flex flex-col gap-4">
               <div className="w-full h-[40%] flex flex-row justify-between gap-4">
                 <div className="w-full h-full flex flex-col gap-2">
-                  <h1 className="text-xl font-lato-bold w-[80px]">
-                    Inverter 1
+                  <h1 className="text-xl font-lato-bold w-[80px] text-gray-800">
+                    PV Panel 1
                   </h1>
-                  <div className="w-full h-full bg-[#272A31] rounded-[7.5px] px-4 py-2 flex items-center flex-row">
+                  <div className="w-full h-full bg-[#e9ecef] rounded-[7.5px] px-4 py-2 flex items-center flex-row">
                     <div className="w-full flex flex-col">
-                      <p className="font-lato-light text-sm text-white/70">
+                      <p className="font-lato-light text-sm text-gray-600">
                         Status
                       </p>
-                      <p className="font-lato-bold text-base">
+                      <p className="font-lato-bold text-base text-gray-800">
+                        {panel1["status"] ? "Active" : "Inactive"}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+                <div className="ease-in-out duration-500 w-full bg-[#e9ecef] rounded-[7.5px] flex items-center justify-center">
+                  <img
+                    className={`${
+                      panel1["status"] ? "opacity-100" : "opacity-50"
+                    } w-16`}
+                    src={inverter}
+                  />
+                </div>
+              </div>
+              <div className="w-full h-[60%] flex flex-col gap-4">
+                <div className="w-full h-full pt-4 px-4 bg-[#e9ecef] rounded-[7.5px] grid grid-cols-2">
+                  <div className="w-full flex flex-col gap-1">
+                    <p className="font-lato-light text-sm text-gray-600">
+                      Voltage
+                    </p>
+                    <p className="font-lato-bold text-lg text-gray-800">
+                      {panel1["voltage"].toFixed(1)} volts
+                    </p>
+                  </div>
+                  <div className="w-full flex flex-col gap-1">
+                    <p className="font-lato-light text-sm text-gray-600">
+                      Current
+                    </p>
+                    <p className="font-lato-bold text-lg text-gray-800">
+                      {panel1["current"]} amps
+                    </p>
+                  </div>
+                </div>
+                <div className="w-full h-full pt-4 px-4 bg-[#e9ecef] rounded-[7.5px] grid grid-cols-2">
+                  <div className="w-full flex flex-col gap-1">
+                    <p className="font-lato-light text-sm text-gray-600">
+                      Power
+                    </p>
+                    <p className="font-lato-bold text-lg text-gray-800">
+                      {panel1["power"]} watts
+                    </p>
+                  </div>
+                  <div className="w-full flex flex-col gap-1">
+                    <p className="font-lato-light text-sm text-gray-600">
+                      Temperature
+                    </p>
+                    <p className="font-lato-bold text-lg text-gray-800">
+                      {panel1["temperature"]} &deg;C
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div className="w-full p-4 bg-[#f8f9fa] rounded-[15px]">
+              <Chart
+                id="pv-chart-1"
+                title={"PV Panel 1 Metrics"}
+                y_title={"Values"}
+                data={[
+                  {
+                    name: "PV Panel 1 Voltage",
+                    style: {
+                      fontFamily: "Lato",
+                      fontSize: "14px",
+                      color: "#fff",
+                    },
+                    data: data1,
+                  },
+                  {
+                    name: "PV Panel 1 Current",
+                    style: {
+                      fontFamily: "Lato",
+                      fontSize: "14px",
+                      color: "#fff",
+                    },
+                    data: current1,
+                  },
+                  {
+                    name: "PV Panel 1 Power",
+                    style: {
+                      fontFamily: "Lato",
+                      fontSize: "14px",
+                      color: "#fff",
+                    },
+                    data: power1,
+                  },
+                ]}
+              />
+            </div>
+          </div>
+          <div className="w-full flex flex-row gap-4">
+            <div className="w-[450px] bg-[#f8f9fa] rounded-[15px] p-8 flex flex-col gap-4">
+              <div className="w-full h-[40%] flex flex-row justify-between gap-4">
+                <div className="w-full h-full flex flex-col gap-2">
+                  <h1 className="text-xl font-lato-bold w-[80px] text-gray-800">
+                    PV Panel 2
+                  </h1>
+                  <div className="w-full h-full bg-[#e9ecef] rounded-[7.5px] px-4 py-2 flex items-center flex-row">
+                    <div className="w-full flex flex-col">
+                      <p className="font-lato-light text-sm text-gray-600">
+                        Status
+                      </p>
+                      <p className="font-lato-bold text-base text-gray-800">
+                        {panel2["status"] ? "Active" : "Inactive"}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+                <div className="ease-in-out duration-500 w-full bg-[#e9ecef] rounded-[7.5px] flex items-center justify-center">
+                  <img
+                    className={`${
+                      panel2["status"] ? "opacity-100" : "opacity-50"
+                    } w-16`}
+                    src={inverter}
+                  />
+                </div>
+              </div>
+              <div className="w-full h-[60%] flex flex-col gap-4">
+                <div className="w-full h-full pt-4 px-4 bg-[#e9ecef] rounded-[7.5px] grid grid-cols-2">
+                  <div className="w-full flex flex-col gap-1">
+                    <p className="font-lato-light text-sm text-gray-600">
+                      Voltage
+                    </p>
+                    <p className="font-lato-bold text-lg text-gray-800">
+                      {panel2["voltage"].toFixed(1)} volts
+                    </p>
+                  </div>
+                  <div className="w-full flex flex-col gap-1">
+                    <p className="font-lato-light text-sm text-gray-600">
+                      Current
+                    </p>
+                    <p className="font-lato-bold text-lg text-gray-800">
+                      {panel2["current"]} amps
+                    </p>
+                  </div>
+                </div>
+                <div className="w-full h-full pt-4 px-4 bg-[#e9ecef] rounded-[7.5px] grid grid-cols-2">
+                  <div className="w-full flex flex-col gap-1">
+                    <p className="font-lato-light text-sm text-gray-600">
+                      Power
+                    </p>
+                    <p className="font-lato-bold text-lg text-gray-800">
+                      {panel2["power"]} watts
+                    </p>
+                  </div>
+                  <div className="w-full flex flex-col gap-1">
+                    <p className="font-lato-light text-sm text-gray-600">
+                      Temperature
+                    </p>
+                    <p className="font-lato-bold text-lg text-gray-800">
+                      {panel2["temperature"]} &deg;C
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div className="w-full p-4 bg-[#f8f9fa] rounded-[15px]">
+              <Chart
+                id="pv-chart-2"
+                title={"PV Panel 2 Metrics"}
+                y_title={"Values"}
+                data={[
+                  {
+                    name: "PV Panel 2 Voltage",
+                    style: {
+                      fontFamily: "Lato",
+                      fontSize: "14px",
+                      color: "#fff",
+                    },
+                    data: data2,
+                  },
+                  {
+                    name: "PV Panel 2 Current",
+                    style: {
+                      fontFamily: "Lato",
+                      fontSize: "14px",
+                      color: "#fff",
+                    },
+                    data: current2,
+                  },
+                  {
+                    name: "PV Panel 2 Power",
+                    style: {
+                      fontFamily: "Lato",
+                      fontSize: "14px",
+                      color: "#fff",
+                    },
+                    data: power2,
+                  },
+                ]}
+              />
+            </div>
+          </div>
+          <div className="w-full flex flex-row gap-4">
+            <div className="w-[450px] bg-[#f8f9fa] rounded-[15px] p-8 flex flex-col gap-4">
+              <div className="w-full h-[40%] flex flex-row justify-between gap-4">
+                <div className="w-full h-full flex flex-col gap-2">
+                  <h1 className="text-xl font-lato-bold w-[80px] text-gray-800">
+                    Inverter 1
+                  </h1>
+                  <div className="w-full h-full bg-[#e9ecef] rounded-[7.5px] px-4 py-2 flex items-center flex-row">
+                    <div className="w-full flex flex-col">
+                      <p className="font-lato-light text-sm text-gray-600">
+                        Status
+                      </p>
+                      <p className="font-lato-bold text-base text-gray-800">
                         {AC1["status"] ? "Active" : "Inactive"}
                       </p>
                     </div>
                   </div>
                 </div>
 
-                <div className="ease-in-out duration-500 w-full bg-[#272A31] rounded-[7.5px] flex items-center justify-center">
+                <div className="ease-in-out duration-500 w-full bg-[#e9ecef] rounded-[7.5px] flex items-center justify-center">
                   <img
                     className={`${
                       AC1["status"] ? "opacity-100" : "opacity-50"
@@ -442,52 +729,52 @@ function Dashboard() {
                 </div>
               </div>
               <div className="w-full h-[60%] flex flex-col gap-4">
-                <div className="w-full h-full pt-4 px-4 bg-[#272A31] rounded-[7.5px] grid grid-cols-2">
+                <div className="w-full h-full pt-4 px-4 bg-[#e9ecef] rounded-[7.5px] grid grid-cols-2">
                   <div className="w-full flex flex-col gap-1">
-                    <p className="font-lato-light text-sm text-white/70">
+                    <p className="font-lato-light text-sm text-gray-600">
                       Voltage
                     </p>
-                    <p className="font-lato-bold text-lg">
+                    <p className="font-lato-bold text-lg text-gray-800">
                       {AC1["voltage"].toFixed(1)} volts
                     </p>
                   </div>
                   <div className="w-full flex flex-col gap-1">
-                    <p className="font-lato-light text-sm text-white/70">
+                    <p className="font-lato-light text-sm text-gray-600">
                       Frequency
                     </p>
-                    <p className="font-lato-bold text-lg">
+                    <p className="font-lato-bold text-lg text-gray-800">
                       {AC1["frequency"]} Hz
                     </p>
                   </div>
                 </div>
-                <div className="w-full h-full pt-4 px-4 bg-[#272A31] rounded-[7.5px] grid grid-cols-2">
+                <div className="w-full h-full pt-4 px-4 bg-[#e9ecef] rounded-[7.5px] grid grid-cols-2">
                   <div className="w-full flex flex-col gap-1">
-                    <p className="font-lato-light text-sm text-white/70">
+                    <p className="font-lato-light text-sm text-gray-600">
                       Current
                     </p>
-                    <p className="font-lato-bold text-lg">
+                    <p className="font-lato-bold text-lg text-gray-800">
                       {AC1["current"]} amps
                     </p>
                   </div>
                   <div className="w-full flex flex-col gap-1">
-                    <p className="font-lato-light text-sm text-white/70">
+                    <p className="font-lato-light text-sm text-gray-600">
                       Power
                     </p>
-                    <p className="font-lato-bold text-lg">
+                    <p className="font-lato-bold text-lg text-gray-800">
                       {AC1["power"]} watts
                     </p>
                   </div>
                 </div>
               </div>
             </div>
-            <div className="w-full p-4 bg-[#1F1E23] rounded-[15px] ">
+            <div className="w-full p-4 bg-[#f8f9fa] rounded-[15px] ">
               <Chart
                 id="ac-chart"
-                title={"Inverter Voltage"}
-                y_title={"Voltage AC"}
+                title={"Inverter Metrics"}
+                y_title={"Values"}
                 data={[
                   {
-                    name: "Inverter 1",
+                    name: "Inverter Voltage",
                     style: {
                       fontFamily: "Lato",
                       fontSize: "14px",
@@ -495,30 +782,48 @@ function Dashboard() {
                     },
                     data: data4,
                   },
+                  {
+                    name: "Inverter Frequency",
+                    style: {
+                      fontFamily: "Lato",
+                      fontSize: "14px",
+                      color: "#fff",
+                    },
+                    data: frequency,
+                  },
+                  {
+                    name: "Inverter Power",
+                    style: {
+                      fontFamily: "Lato",
+                      fontSize: "14px",
+                      color: "#fff",
+                    },
+                    data: powerAC,
+                  },
                 ]}
               />
             </div>
           </div>
           <div className="w-full flex flex-row gap-4">
-            <div className="w-[450px] bg-[#1F1E23] rounded-[15px] p-8 flex flex-col gap-4">
+            <div className="w-[450px] bg-[#f8f9fa] rounded-[15px] p-8 flex flex-col gap-4">
               <div className="w-full h-[40%] flex flex-row justify-between gap-4">
                 <div className="w-full h-full flex flex-col gap-2">
-                  <h1 className="text-xl font-lato-bold w-[80px]">
+                  <h1 className="text-xl font-lato-bold w-[80px] text-gray-800">
                     Pyranometer
                   </h1>
-                  <div className="w-full h-full bg-[#272A31] rounded-[7.5px] px-4 py-2 flex items-center flex-row">
+                  <div className="w-full h-full bg-[#e9ecef] rounded-[7.5px] px-4 py-2 flex items-center flex-row">
                     <div className="w-full flex flex-col">
-                      <p className="font-lato-light text-sm text-white/70">
+                      <p className="font-lato-light text-sm text-gray-600">
                         Status
                       </p>
-                      <p className="font-lato-bold text-base">
+                      <p className="font-lato-bold text-base text-gray-800">
                         {R1["status"] ? "Active" : "Inactive"}
                       </p>
                     </div>
                   </div>
                 </div>
 
-                <div className="ease-in-out duration-500 w-full bg-[#272A31] rounded-[7.5px] flex items-center justify-center">
+                <div className="ease-in-out duration-500 w-full bg-[#e9ecef] rounded-[7.5px] flex items-center justify-center">
                   <img
                     className={`${
                       R1["status"] ? "opacity-100" : "opacity-50"
@@ -528,17 +833,19 @@ function Dashboard() {
                 </div>
               </div>
               <div className="w-full h-[60%] flex flex-col gap-4">
-                <div className="w-full h-full pt-4 px-4 bg-[#272A31] rounded-[7.5px] grid grid-cols-2">
+                <div className="w-full h-full pt-4 px-4 bg-[#e9ecef] rounded-[7.5px] grid grid-cols-2">
                   <div className="w-full flex flex-col gap-1">
-                    <p className="font-lato-light text-white/70">
+                    <p className="font-lato-light text-sm text-gray-600">
                       Solar Radiation
                     </p>
-                    <p className="font-lato-bold text-xl">{radiance} W/m²</p>
+                    <p className="font-lato-bold text-xl text-gray-800">
+                      {radiance} W/m²
+                    </p>
                   </div>
                 </div>
               </div>
             </div>
-            <div className="w-full p-4 bg-[#1F1E23] rounded-[15px] ">
+            <div className="w-full p-4 bg-[#f8f9fa] rounded-[15px] ">
               <RadianceChart
                 id="radiance-chart"
                 title={"Solar Radiation"}
@@ -549,7 +856,7 @@ function Dashboard() {
                     style: {
                       fontFamily: "Lato",
                       fontSize: "14px",
-                      color: "#fff",
+                      color: "#343a40",
                     },
                     data: data5,
                   },

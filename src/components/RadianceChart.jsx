@@ -8,14 +8,14 @@ function RadianceChart({ id, data, title, y_title }) {
       className="text-white"
       options={{
         theme: {
-          mode: "dark",
+          mode: "light",
           palette: "palette1",
         },
         chart: {
           id: id,
           height: 350,
           type: "line",
-          foreColor: "#fff",
+          foreColor: "#343a40",
           background: "transparent",
           animations: {
             enabled: true,
@@ -40,7 +40,7 @@ function RadianceChart({ id, data, title, y_title }) {
           tickAmount: 30,
           style: {
             fontFamily: "Lato",
-            color: "#fff",
+            color: "#343a40",
           },
 
           labels: {
@@ -55,7 +55,7 @@ function RadianceChart({ id, data, title, y_title }) {
             style: {
               fontFamily: "Lato-bold",
               fontSize: "12px",
-              color: "#fff",
+              color: "#343a40",
             },
           },
           min: 0,
@@ -67,15 +67,15 @@ function RadianceChart({ id, data, title, y_title }) {
           style: {
             fontFamily: "Lato",
             fontSize: "18px",
-            color: "#fff",
+            color: "#343a40",
           },
         },
 
         fill: {
           type: "gradient",
           gradient: {
-            shade: "dark",
-            gradientToColors: ["#FDD835"],
+            shade: "light",
+            gradientToColors: ["#007bff"],
             shadeIntensity: 1,
             type: "horizontal",
             opacityFrom: 1,

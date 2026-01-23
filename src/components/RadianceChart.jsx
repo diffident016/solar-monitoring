@@ -83,6 +83,9 @@ function RadianceChart({ id, data, title, y_title }) {
             stops: [0, 100, 100, 100],
           },
         },
+        tooltip: {
+          enabled: false,
+        },
       }}
       series={data}
       type="line"

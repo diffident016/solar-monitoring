@@ -9,7 +9,6 @@ function Chart({ id, data, title, y_title }) {
       options={{
         theme: {
           mode: "light",
-          palette: "palette1",
         },
         chart: {
           id: id,
@@ -82,6 +81,9 @@ function Chart({ id, data, title, y_title }) {
             opacityTo: 1,
             stops: [0, 100, 100, 100],
           },
+        },
+        tooltip: {
+          enabled: false,
         },
       }}
       series={data}

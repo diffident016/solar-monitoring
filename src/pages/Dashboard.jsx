@@ -1116,6 +1116,26 @@ function Dashboard() {
               />
             </div>
           </div>
+          <div className="w-full bg-[#f8f9fa] rounded-[15px] p-8 flex flex-col gap-4">
+            <h1 className="text-xl font-lato-bold text-gray-800">Carbon Emissions</h1>
+            <div className="w-full grid grid-cols-3 gap-4">
+              <div className="bg-[#e9ecef] rounded-[7.5px] pt-4 px-4 pb-4 flex flex-col gap-1">
+                <p className="font-lato-light text-sm text-gray-600">Energy Generated (EG)</p>
+                <p className="font-lato-bold text-lg text-gray-800">{(AC1["power"] / 1000).toFixed(4)} kWh</p>
+              </div>
+              <div className="bg-[#e9ecef] rounded-[7.5px] pt-4 px-4 pb-4 flex flex-col gap-1">
+                <p className="font-lato-light text-sm text-gray-600">Emission Factor (EF<sub>grid</sub>)</p>
+                <p className="font-lato-bold text-lg text-gray-800">0.551 kgCO₂/kWh</p>
+              </div>
+              <div className="bg-[#e9ecef] rounded-[7.5px] pt-4 px-4 pb-4 flex flex-col gap-1">
+                <p className="font-lato-light text-sm text-gray-600">Baseline Emissions (BE)</p>
+                <p className="font-lato-bold text-lg text-gray-800">{((AC1["power"] / 1000) * 0.551).toFixed(4)} kgCO₂</p>
+              </div>
+            </div>
+            <p className="font-lato-light text-xs text-gray-500">
+              BE = EG × EF<sub>grid</sub> &nbsp;|&nbsp; EG = Inverter Power / 1000
+            </p>
+          </div>
         </div>
       </div>
     </div>

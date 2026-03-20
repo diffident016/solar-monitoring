@@ -1,6 +1,5 @@
-import React, { useEffect, useReducer, useState } from "react";
-import PVPanel from "../components/PVPanel";
-import ReactApexChart from "react-apexcharts";
+/* global ApexCharts */
+import { useEffect, useReducer, useState } from "react";
 import { onValue, ref, set, get } from "firebase/database";
 import { db } from "../../firebase";
 import { format } from "date-fns";
@@ -10,22 +9,26 @@ import inverter from "../assets/images/inverter.png";
 import solar from "../assets/images/sunny.png";
 import RadianceChart from "../components/RadianceChart";
 import drive from "../assets/images/google-drive.png";
+import ReplayControls from "../components/ReplayControls";
+import { parseCSV, classifyRows, buildTimeline } from "../utils/csvParser";
+import {
+  initTokenClient,
+  openPicker,
+  downloadFile,
+} from "../utils/drivePicker";
 
 function Dashboard() {
   var timer1 = null;
   var timer2 = null;
-  var timer3 = null;
   var timer4 = null;
   var timer5 = null;
 
   let [voltage1, setVoltage1] = useState(0);
   let [voltage2, setVoltage2] = useState(0);
-  let [voltage3, setVoltage3] = useState(0);
   let [voltage4, setVoltage4] = useState(0);
   let [radiance, setRadiance] = useState(0);
   let [data1, setData1] = useState([{ x: new Date(), y: 0 }]);
   let [data2, setData2] = useState([{ x: new Date(), y: 0 }]);
-  let [data3, setData3] = useState([{ x: new Date(), y: 0 }]);
   let [data4, setData4] = useState([{ x: new Date(), y: 0 }]);
   let [data5, setData5] = useState([{ x: new Date(), y: [0, 0, 0, 0, 0] }]);
 
@@ -37,6 +40,14 @@ function Dashboard() {
   let [frequency, setFrequency] = useState([{ x: new Date(), y: 0 }]);
   let [powerAC, setPowerAC] = useState([{ x: new Date(), y: 0 }]);
   const [recording, setRecording] = useState(0);
+
+  // Replay state
+  const [mode, setMode] = useState("live"); // 'live' | 'replay'
+  const [timeline, setTimeline] = useState([]);
+  const [replayIndex, setReplayIndex] = useState(0);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [replaySpeed, setReplaySpeed] = useState(1);
+  const [replayFileName, setReplayFileName] = useState("");
 
   const [panel1, updatePanel1] = useReducer(
     (prev, next) => {
@@ -53,20 +64,6 @@ function Dashboard() {
   );
 
   const [panel2, updatePanel2] = useReducer(
-    (prev, next) => {
-      return { ...prev, ...next };
-    },
-    {
-      fetchState: 0,
-      status: false,
-      voltage: 0,
-      current: 0,
-      power: 0,
-      temperature: 0,
-    },
-  );
-
-  const [panel3, updatePanel3] = useReducer(
     (prev, next) => {
       return { ...prev, ...next };
     },
@@ -107,13 +104,12 @@ function Dashboard() {
   );
 
   useEffect(() => {
+    if (mode === "replay") return;
     const query = ref(db, "/NODE-01");
     return onValue(query, (snapshot) => {
       const data = snapshot.val();
 
       if (snapshot.exists()) {
-        //console.log(new Date(data["timestamp"] * 1000));
-
         setVoltage1(parseFloat(data["voltage"]));
         updatePanel1({
           status: true,
@@ -140,15 +136,15 @@ function Dashboard() {
         });
       }, 5000);
     });
-  }, []);
+  }, [mode]);
 
   useEffect(() => {
+    if (mode === "replay") return;
     const query = ref(db, "/NODE-02");
     return onValue(query, (snapshot) => {
       const data = snapshot.val();
 
       if (snapshot.exists()) {
-        //console.log(new Date(data["timestamp"] * 1000));
         setVoltage2(parseFloat(data["voltage"]));
         updatePanel2({
           status: true,
@@ -175,15 +171,15 @@ function Dashboard() {
         });
       }, 5000);
     });
-  }, []);
+  }, [mode]);
 
   useEffect(() => {
+    if (mode === "replay") return;
     const query = ref(db, "/NODE-04");
     return onValue(query, (snapshot) => {
       const data = snapshot.val();
 
       if (snapshot.exists()) {
-        //console.log(new Date(data["timestamp"] * 1000));
         setVoltage4(parseFloat(data["voltage"]));
         updateAC1({
           status: true,
@@ -212,15 +208,15 @@ function Dashboard() {
         });
       }, 5000);
     });
-  }, []);
+  }, [mode]);
 
   useEffect(() => {
+    if (mode === "replay") return;
     const query = ref(db, "/NODE-05");
     return onValue(query, (snapshot) => {
       const data = snapshot.val();
 
       if (snapshot.exists()) {
-        //console.log(new Date(data["timestamp"] * 1000));
         setRadiance(data["radiance"]);
         updateR1({
           status: true,
@@ -241,7 +237,7 @@ function Dashboard() {
         });
       }, 10000);
     });
-  }, []);
+  }, [mode]);
 
   useEffect(() => {
     const query = ref(db, "/RECORDING");
@@ -254,6 +250,7 @@ function Dashboard() {
     });
   }, []);
 
+  // Live PV chart interval
   useInterval(() => {
     var temp = data1;
     if (temp.length >= 30) {
@@ -360,8 +357,9 @@ function Dashboard() {
         data: power2,
       },
     ]);
-  }, 1000);
+  }, mode === "live" ? 1000 : null);
 
+  // Live AC/inverter chart interval
   useInterval(() => {
     var temp = data4;
     if (temp.length >= 30) {
@@ -415,8 +413,9 @@ function Dashboard() {
         data: powerAC,
       },
     ]);
-  }, 1000);
+  }, mode === "live" ? 1000 : null);
 
+  // Live radiance chart interval
   useInterval(() => {
     var temp = data5;
     if (temp.length >= 30) {
@@ -436,7 +435,207 @@ function Dashboard() {
         data: data5,
       },
     ]);
-  }, 2000);
+  }, mode === "live" ? 2000 : null);
+
+  // Replay interval — ticks through timeline row by row
+  useInterval(() => {
+    if (replayIndex >= timeline.length) {
+      setIsPlaying(false);
+      return;
+    }
+
+    const row = timeline[replayIndex];
+    const ts = row.timestamp;
+
+    if (row.node === "NODE-01") {
+      const v = parseFloat(row["voltage"]);
+      const c = parseFloat(row["current"]);
+      const p = parseFloat(row["power"]);
+      const t = parseFloat(row["temperature"]);
+
+      setVoltage1(v);
+      updatePanel1({ status: true, voltage: v, current: c, power: p, temperature: t });
+
+      const newD1 = data1.length >= 30 ? data1.slice(1) : [...data1];
+      newD1.push({ x: ts, y: parseFloat(v.toFixed(2)) });
+      setData1(newD1);
+
+      const newC1 = current1.length >= 30 ? current1.slice(1) : [...current1];
+      newC1.push({ x: ts, y: c });
+      setCurrent1(newC1);
+
+      const newP1 = power1.length >= 30 ? power1.slice(1) : [...power1];
+      newP1.push({ x: ts, y: p });
+      setPower1(newP1);
+
+      ApexCharts.exec("pv-chart-1", "updateSeries", [
+        { name: "PV Panel 1 Voltage", data: newD1 },
+        { name: "PV Panel 1 Current", data: newC1 },
+        { name: "PV Panel 1 Power", data: newP1 },
+      ]);
+    } else if (row.node === "NODE-02") {
+      const v = parseFloat(row["voltage"]);
+      const c = parseFloat(row["current"]);
+      const p = parseFloat(row["power"]);
+      const t = parseFloat(row["temperature"]);
+
+      setVoltage2(v);
+      updatePanel2({ status: true, voltage: v, current: c, power: p, temperature: t });
+
+      const newD2 = data2.length >= 30 ? data2.slice(1) : [...data2];
+      newD2.push({ x: ts, y: parseFloat(v.toFixed(2)) });
+      setData2(newD2);
+
+      const newC2 = current2.length >= 30 ? current2.slice(1) : [...current2];
+      newC2.push({ x: ts, y: c });
+      setCurrent2(newC2);
+
+      const newP2 = power2.length >= 30 ? power2.slice(1) : [...power2];
+      newP2.push({ x: ts, y: p });
+      setPower2(newP2);
+
+      ApexCharts.exec("pv-chart-2", "updateSeries", [
+        { name: "PV Panel 2 Voltage", data: newD2 },
+        { name: "PV Panel 2 Current", data: newC2 },
+        { name: "PV Panel 2 Power", data: newP2 },
+      ]);
+    } else if (row.node === "NODE-04") {
+      const v = parseFloat(row["voltage"]);
+      const c = parseFloat(row["current"]);
+      const p = parseFloat(row["power"]);
+      const f = parseFloat(row["frequency"]);
+
+      setVoltage4(v);
+      updateAC1({ status: true, voltage: v, current: c, power: p, frequency: f, temperature: 0 });
+
+      const newD4 = data4.length >= 30 ? data4.slice(1) : [...data4];
+      newD4.push({ x: ts, y: v });
+      setData4(newD4);
+
+      const newFreq = frequency.length >= 30 ? frequency.slice(1) : [...frequency];
+      newFreq.push({ x: ts, y: f });
+      setFrequency(newFreq);
+
+      const newPac = powerAC.length >= 30 ? powerAC.slice(1) : [...powerAC];
+      newPac.push({ x: ts, y: p });
+      setPowerAC(newPac);
+
+      ApexCharts.exec("ac-chart", "updateSeries", [
+        { name: "Inverter Voltage", data: newD4 },
+        { name: "Inverter Frequency", data: newFreq },
+        { name: "Inverter Power", data: newPac },
+      ]);
+    } else if (row.node === "NODE-05") {
+      const r = parseFloat(row["radiance"]);
+
+      setRadiance(r);
+      updateR1({ status: true, radiance: r });
+
+      const newD5 = data5.length >= 30 ? data5.slice(1) : [...data5];
+      newD5.push({ x: ts, y: r });
+      setData5(newD5);
+
+      ApexCharts.exec("radiance-chart", "updateSeries", [
+        { name: "Radiation", data: newD5 },
+      ]);
+    }
+
+    setReplayIndex(replayIndex + 1);
+  }, mode === "replay" && isPlaying ? Math.round(1000 / replaySpeed) : null);
+
+  const resetChartData = () => {
+    const initPoint = [{ x: new Date(), y: 0 }];
+    setData1([...initPoint]);
+    setCurrent1([...initPoint]);
+    setPower1([...initPoint]);
+    setData2([...initPoint]);
+    setCurrent2([...initPoint]);
+    setPower2([...initPoint]);
+    setData4([...initPoint]);
+    setFrequency([...initPoint]);
+    setPowerAC([...initPoint]);
+    setData5([{ x: new Date(), y: 0 }]);
+    setVoltage1(0);
+    setVoltage2(0);
+    setVoltage4(0);
+    setRadiance(0);
+    updatePanel1({ status: false, voltage: 0, current: 0, power: 0, temperature: 0 });
+    updatePanel2({ status: false, voltage: 0, current: 0, power: 0, temperature: 0 });
+    updateAC1({ status: false, voltage: 0, current: 0, power: 0, frequency: 0, temperature: 0 });
+    updateR1({ status: false, radiance: 0 });
+
+    ApexCharts.exec("pv-chart-1", "updateSeries", [
+      { name: "PV Panel 1 Voltage", data: initPoint },
+      { name: "PV Panel 1 Current", data: initPoint },
+      { name: "PV Panel 1 Power", data: initPoint },
+    ]);
+    ApexCharts.exec("pv-chart-2", "updateSeries", [
+      { name: "PV Panel 2 Voltage", data: initPoint },
+      { name: "PV Panel 2 Current", data: initPoint },
+      { name: "PV Panel 2 Power", data: initPoint },
+    ]);
+    ApexCharts.exec("ac-chart", "updateSeries", [
+      { name: "Inverter Voltage", data: initPoint },
+      { name: "Inverter Frequency", data: initPoint },
+      { name: "Inverter Power", data: initPoint },
+    ]);
+    ApexCharts.exec("radiance-chart", "updateSeries", [
+      { name: "Radiation", data: [{ x: new Date(), y: 0 }] },
+    ]);
+  };
+
+  const handlePickFile = async () => {
+    const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+    const apiKey = import.meta.env.VITE_GOOGLE_PICKER_API_KEY;
+    try {
+      const token = await initTokenClient(clientId);
+      await openPicker({
+        apiKey,
+        token,
+        onPicked: async (files) => {
+          let allRows = [];
+          for (const file of files) {
+            const csvText = await downloadFile(file.id, token);
+            allRows = allRows.concat(parseCSV(csvText));
+          }
+          const grouped = classifyRows(allRows);
+          const tl = buildTimeline(grouped);
+          setTimeline(tl);
+          setReplayIndex(0);
+          setReplayFileName(files.map((f) => f.name).join(", "));
+          setIsPlaying(false);
+          resetChartData();
+        },
+      });
+    } catch (err) {
+      console.error("Drive picker error:", err);
+    }
+  };
+
+  const handlePlay = () => {
+    setMode("replay");
+    setIsPlaying(true);
+  };
+
+  const handlePause = () => {
+    setIsPlaying(false);
+  };
+
+  const handleStop = () => {
+    setIsPlaying(false);
+    setReplayIndex(0);
+    resetChartData();
+  };
+
+  const handleModeToggle = (newMode) => {
+    if (newMode === mode) return;
+    setMode(newMode);
+    if (newMode === "live") {
+      setIsPlaying(false);
+      setReplayIndex(0);
+      resetChartData();
+    }
+  };
 
   const toggleRecording = async () => {
     if (recording) {
@@ -458,6 +657,11 @@ function Dashboard() {
     }
   };
 
+  const currentTimestamp =
+    timeline.length > 0 && replayIndex > 0
+      ? timeline[Math.min(replayIndex - 1, timeline.length - 1)].timestamp
+      : null;
+
   return (
     <div className="w-full h-full font-lato">
       <div className="w-full flex flex-col p-8 gap-6">
@@ -466,33 +670,80 @@ function Dashboard() {
             Solar PV Dashboard
           </h1>
           <div className="flex flex-row gap-4">
-            <a
-              href="https://drive.google.com/drive/u/3/folders/17launolGC7baacIu_yyBsh5EVdWbeD_7"
-              target="_blank"
-              className="flex flex-row text-lg font-semibold items-center gap-3 bg-[#e9ecef] rounded-md py-3 px-4 text-gray-800"
-            >
-              <img src={drive} className="w-5 h-5" />
-              Recordings Drive
-            </a>
-            <button
-              onClick={() => {
-                toggleRecording();
-              }}
-              className="flex flex-row text-lg font-semibold items-center gap-3 bg-[#e9ecef] rounded-md py-3 px-4 text-gray-800"
-            >
-              <div
-                className={`rounded-full w-3 h-3 ${
-                  recording ? "bg-[#dc3545] animate-ping" : "bg-[#6c757d]"
-                } `}
-              ></div>
-              {recording === 1
-                ? "Stop Recording"
-                : recording === 2
-                  ? "Saving..."
-                  : "Start Recording"}
-            </button>
+            {/* Live / Replay mode toggle */}
+            <div className="flex flex-row bg-[#e9ecef] rounded-md overflow-hidden">
+              <button
+                onClick={() => handleModeToggle("live")}
+                className={`py-3 px-5 text-lg font-semibold ${
+                  mode === "live"
+                    ? "bg-[#343a40] text-white"
+                    : "text-gray-800"
+                }`}
+              >
+                Live
+              </button>
+              <button
+                onClick={() => handleModeToggle("replay")}
+                className={`py-3 px-5 text-lg font-semibold ${
+                  mode === "replay"
+                    ? "bg-[#343a40] text-white"
+                    : "text-gray-800"
+                }`}
+              >
+                Replay
+              </button>
+            </div>
+
+            {mode === "live" && (
+              <>
+                <a
+                  href="https://drive.google.com/drive/u/3/folders/17launolGC7baacIu_yyBsh5EVdWbeD_7"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="flex flex-row text-lg font-semibold items-center gap-3 bg-[#e9ecef] rounded-md py-3 px-4 text-gray-800"
+                >
+                  <img src={drive} className="w-5 h-5" />
+                  Recordings Drive
+                </a>
+                <button
+                  onClick={() => {
+                    toggleRecording();
+                  }}
+                  className="flex flex-row text-lg font-semibold items-center gap-3 bg-[#e9ecef] rounded-md py-3 px-4 text-gray-800"
+                >
+                  <div
+                    className={`rounded-full w-3 h-3 ${
+                      recording ? "bg-[#dc3545] animate-ping" : "bg-[#6c757d]"
+                    } `}
+                  ></div>
+                  {recording === 1
+                    ? "Stop Recording"
+                    : recording === 2
+                      ? "Saving..."
+                      : "Start Recording"}
+                </button>
+              </>
+            )}
           </div>
         </div>
+
+        {/* Replay controls panel */}
+        {mode === "replay" && (
+          <ReplayControls
+            isPlaying={isPlaying}
+            onPlay={handlePlay}
+            onPause={handlePause}
+            onStop={handleStop}
+            speed={replaySpeed}
+            onSpeedChange={setReplaySpeed}
+            currentTimestamp={currentTimestamp}
+            totalRows={timeline.length}
+            currentIndex={replayIndex}
+            onPickFile={handlePickFile}
+            fileName={replayFileName}
+          />
+        )}
+
         <div className="w-full h-full flex flex-col gap-4">
           <div className="w-full flex flex-row gap-4">
             <div className="w-[450px] bg-[#f8f9fa] rounded-[15px] p-8 flex flex-col gap-4">

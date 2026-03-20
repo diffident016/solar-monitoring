@@ -543,8 +543,9 @@ function Dashboard() {
     setReplayIndex(replayIndex + 1);
   }, mode === "replay" && isPlaying ? Math.round(1000 / replaySpeed) : null);
 
-  const resetChartData = () => {
-    const initPoint = [{ x: new Date(), y: 0 }];
+  const resetChartData = (initTimestamp = null) => {
+    const t = initTimestamp ?? new Date();
+    const initPoint = [{ x: t, y: 0 }];
     setData1([...initPoint]);
     setCurrent1([...initPoint]);
     setPower1([...initPoint]);
@@ -554,7 +555,7 @@ function Dashboard() {
     setData4([...initPoint]);
     setFrequency([...initPoint]);
     setPowerAC([...initPoint]);
-    setData5([{ x: new Date(), y: 0 }]);
+    setData5([{ x: t, y: 0 }]);
     setVoltage1(0);
     setVoltage2(0);
     setVoltage4(0);
@@ -580,7 +581,7 @@ function Dashboard() {
       { name: "Inverter Power", data: initPoint },
     ]);
     ApexCharts.exec("radiance-chart", "updateSeries", [
-      { name: "Radiation", data: [{ x: new Date(), y: 0 }] },
+      { name: "Radiation", data: [{ x: t, y: 0 }] },
     ]);
   };
 
@@ -604,7 +605,7 @@ function Dashboard() {
           setReplayIndex(0);
           setReplayFileName(files.map((f) => f.name).join(", "));
           setIsPlaying(false);
-          resetChartData();
+          resetChartData(tl[0]?.timestamp ?? null);
         },
       });
     } catch (err) {

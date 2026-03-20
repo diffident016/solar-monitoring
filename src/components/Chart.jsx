@@ -58,7 +58,7 @@ function Chart({ id, data, title, y_title }) {
             },
           },
           min: 0,
-          max: 300,
+          max: (max) => Math.ceil(max * 1.1) || 10,
         },
         title: {
           text: title,

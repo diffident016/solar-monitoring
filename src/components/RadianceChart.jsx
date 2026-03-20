@@ -59,7 +59,7 @@ function RadianceChart({ id, data, title, y_title }) {
             },
           },
           min: 0,
-          max: 1000,
+          max: (max) => Math.ceil(max * 1.1) || 10,
         },
         title: {
           text: title,
